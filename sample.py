@@ -58,6 +58,9 @@ bot = TeamsBot(
 with open("./webexteamsbot/StatusInputCard.json", "r") as card:
     INPUT_CARD = json.load(card)
 
+with open("./webexteamsbot/ReminderInputCard.json", "r") as reminder_card:
+    REMINDER_INPUT_CARD = json.load(reminder_card)
+
 MESSAGE_ID_FOR_FORM = ""
 
 
@@ -94,17 +97,31 @@ def do_something(incoming_msg):
 # make sure to take the data that comes out of the MS card designer and
 # put it inside of the "content" below, otherwise Webex won't understand
 # what you send it.
-def show_card(incoming_msg):
+def show_status_card(incoming_msg):
     global MESSAGE_ID_FOR_FORM
-    response_message = "Check Status Form"
+    global MESSAGE_TEXT_FOR_FORM
+    response_message = "status"
 
     c = create_message_with_attachment(
         incoming_msg.roomId, msgtxt=response_message, attachment=INPUT_CARD
     )
     MESSAGE_ID_FOR_FORM = c["id"]
+    MESSAGE_TEXT_FOR_FORM = c["text"]
     print(c)
     return ""
 
+def show_reminder_card(incoming_msg):
+    global MESSAGE_ID_FOR_FORM
+    global MESSAGE_TEXT_FOR_FORM
+    response_message = "notify"
+
+    c = create_message_with_attachment(
+        incoming_msg.roomId, msgtxt=response_message, attachment=REMINDER_INPUT_CARD
+    )
+    MESSAGE_ID_FOR_FORM = c["id"]
+    MESSAGE_TEXT_FOR_FORM = c["text"]
+    print(c)
+    return ""
 
 # An example of how to process card actions
 def handle_cards(api, incoming_msg):
@@ -114,9 +131,20 @@ def handle_cards(api, incoming_msg):
     :param incoming_msg: The incoming message object from Teams
     :return: A text or markdown based reply
     """
+
     m = get_attachment_actions(incoming_msg["data"]["id"])
-    recipient_email = m["inputs"]["trackEmail"]
+    if(MESSAGE_TEXT_FOR_FORM == "notify") :
+        recipient_email = m["inputs"]["notifyEmail"]
+        reminders = m ["inputs"]["reminder"]
+        message = m ["inputs"]["messageContext"]
+        processNotify(recipient_email,reminders,message)
+    elif(MESSAGE_TEXT_FOR_FORM == "status") :
+        recipient_email = m["inputs"]["trackEmail"]
     return "The status of the following user will be notified - {}".format(recipient_email)
+
+
+def processNotify(recipient_email,reminders,message):
+    print("Testing :"+recipient_email+" "+reminders+" "+message)
 
 
 # Temporary function to send a message with a card attachment (not yet
@@ -221,7 +249,8 @@ bot.set_greeting(greeting)
 
 # Add new commands to the bot.
 bot.add_command("attachmentActions", "*", handle_cards)
-bot.add_command("/showcard", "show an adaptive card", show_card)
+bot.add_command("check_status", "show a status card", show_status_card)# CHECK_STATUS
+bot.add_command("notify", "show a reminder card", show_reminder_card)# NOTIFY
 bot.add_command("/dosomething", "help for do something", do_something)
 bot.add_command(
     "/demo", "Sample that creates a Teams message to be returned.", ret_message
