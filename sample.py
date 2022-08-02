@@ -4,7 +4,13 @@ Sample code for using webexteamsbot
 """
 
 import os
+import time
+import urllib
+from datetime import timedelta
+
 import requests
+import schedule
+
 from webexteamsbot import TeamsBot
 from webexteamsbot.models import Response
 import sys
@@ -15,6 +21,10 @@ bot_email = os.getenv("TEAMS_BOT_EMAIL")
 teams_token = os.getenv("TEAMS_BOT_TOKEN")
 bot_url = os.getenv("TEAMS_BOT_URL")
 bot_app_name = os.getenv("TEAMS_BOT_APP_NAME")
+message_url = "https://webexapis.com/v1/messages"
+
+global PARTICIPANTS_AVAILABLE
+PARTICIPANTS_AVAILABLE = False
 
 # Example: How to limit the approved Webex Teams accounts for interaction
 #          Also uncomment the parameter in the instantiation of the new bot
@@ -77,18 +87,6 @@ def greeting(incoming_msg):
     return response
 
 
-# Create functions that will be linked to bot commands to add capabilities
-# ------------------------------------------------------------------------
-
-# A simple command that returns a basic string that will be sent as a reply
-def do_something(incoming_msg):
-    """
-    Sample function to do some action.
-    :param incoming_msg: The incoming message object from Teams
-    :return: A text or markdown based reply
-    """
-    return "i did what you said - {}".format(incoming_msg.text)
-
 
 # This function generates a basic adaptive card and sends it to the user
 # You can use Microsofts Adaptive Card designer here:
@@ -113,7 +111,9 @@ def show_status_card(incoming_msg):
 def show_reminder_card(incoming_msg):
     global MESSAGE_ID_FOR_FORM
     global MESSAGE_TEXT_FOR_FORM
+    global SENDER_EMAIL
     response_message = "notify"
+    SENDER_EMAIL = incoming_msg.personEmail
 
     c = create_message_with_attachment(
         incoming_msg.roomId, msgtxt=response_message, attachment=REMINDER_INPUT_CARD
@@ -137,14 +137,52 @@ def handle_cards(api, incoming_msg):
         recipient_email = m["inputs"]["notifyEmail"]
         reminders = m ["inputs"]["reminder"]
         message = m ["inputs"]["messageContext"]
-        processNotify(recipient_email,reminders,message)
+        processNotify(recipient_email, reminders, message)
+        return "{} was successfully notified".format(recipient_email)
+
     elif(MESSAGE_TEXT_FOR_FORM == "status") :
         recipient_email = m["inputs"]["trackEmail"]
     return "The status of the following user will be notified - {}".format(recipient_email)
 
 
-def processNotify(recipient_email,reminders,message):
-    print("Testing :"+recipient_email+" "+reminders+" "+message)
+def processNotify(recipient_email, reminders, message):
+    """
+    Sample function to do some action.
+    :param incoming_msg: The incoming message object from Teams
+    :return: A text or markdown based reply
+    """
+
+
+    text_format = "{} wants to talk to you about - {}".format(SENDER_EMAIL, message)
+    headers = {
+        "content-type": "application/json; charset=utf-8",
+        "authorization": "Bearer " + teams_token,
+    }
+    post_body = {
+        "toPersonEmail": recipient_email,
+        "text": text_format
+    }
+    schedule.every(20).seconds.until(timedelta(hours=1)).do(are_participants_available, sender_email_id=SENDER_EMAIL, receiver_email_id=recipient_email)
+    while True:
+        schedule.run_pending()
+        if not schedule.jobs:
+            break
+        time.sleep(1)
+    requests.post(message_url, json=post_body, headers=headers)
+    return "Pinged {} about - {}".format(recipient_email, message)
+
+
+def are_participants_available(sender_email_id, receiver_email_id):
+    if get_user_current_status(receiver_email_id) == 'active' and get_user_current_status(sender_email_id) == 'active':
+        return schedule.CancelJob
+
+def get_user_current_status(email_id):
+    get_people_api_string = "https://webexapis.com/v1/people?email=" + email_id
+    response = requests.get(get_people_api_string, headers={'Authorization': 'Bearer {}'.format(teams_token)})
+    response_json = response.json()
+    status = response_json['items'][0]['status']
+    print("****The current status of " + email_id + "is :" + status)
+    return status
 
 
 # Temporary function to send a message with a card attachment (not yet
@@ -250,8 +288,7 @@ bot.set_greeting(greeting)
 # Add new commands to the bot.
 bot.add_command("attachmentActions", "*", handle_cards)
 bot.add_command("check_status", "show a status card", show_status_card)# CHECK_STATUS
-bot.add_command("notify", "show a reminder card", show_reminder_card)# NOTIFY
-bot.add_command("/dosomething", "help for do something", do_something)
+bot.add_command("notify", "notify person about upcoming conversation", show_reminder_card)# NOTIFY
 bot.add_command(
     "/demo", "Sample that creates a Teams message to be returned.", ret_message
 )
@@ -263,4 +300,4 @@ bot.remove_command("/echo")
 
 if __name__ == "__main__":
     # Run Bot
-    bot.run(host="0.0.0.0", port=5000)
+    bot.run(host="0.0.0.0", port=6000)
