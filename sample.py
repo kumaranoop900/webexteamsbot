@@ -58,6 +58,8 @@ bot = TeamsBot(
 with open("./webexteamsbot/StatusInputCard.json", "r") as card:
     INPUT_CARD = json.load(card)
 
+MESSAGE_ID_FOR_FORM = ""
+
 
 # Create a custom bot greeting function returned when no command is given.
 # The default behavior of the bot is to return the '/help' command response
@@ -93,11 +95,13 @@ def do_something(incoming_msg):
 # put it inside of the "content" below, otherwise Webex won't understand
 # what you send it.
 def show_card(incoming_msg):
+    global MESSAGE_ID_FOR_FORM
     response_message = "Check Status Form"
 
     c = create_message_with_attachment(
         incoming_msg.roomId, msgtxt=response_message, attachment=INPUT_CARD
     )
+    MESSAGE_ID_FOR_FORM = c["id"]
     print(c)
     return ""
 
@@ -133,15 +137,21 @@ def create_message_with_attachment(rid, msgtxt, attachment):
 # Temporary function to get card attachment actions (not yet supported
 # by webexteamssdk, but there are open PRs to add this functionality)
 def get_attachment_actions(attachmentid):
+    global MESSAGE_ID_FOR_FORM
     headers = {
         "content-type": "application/json; charset=utf-8",
         "authorization": "Bearer " + teams_token,
     }
 
     attachment_url = "https://api.ciscospark.com/v1/attachment/actions/" + attachmentid
-    response = requests.get(attachment_url, headers=headers)
+    attachement_response = requests.get(attachment_url, headers=headers)
 
-    return response.json()
+    message_url = "https://api.ciscospark.com/v1/messages/" + MESSAGE_ID_FOR_FORM
+    message_response = requests.delete(url=message_url, headers=headers)
+    print(message_response)
+    MESSAGE_ID_FOR_FORM = ""
+
+    return attachement_response.json()
 
 
 # An example using a Response object.  Response objects allow more complex
