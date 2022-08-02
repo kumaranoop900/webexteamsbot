@@ -55,6 +55,9 @@ bot = TeamsBot(
     ],
 )
 
+with open("./webexteamsbot/StatusInputCard.json", "r") as card:
+    INPUT_CARD = json.load(card)
+
 
 # Create a custom bot greeting function returned when no command is given.
 # The default behavior of the bot is to return the '/help' command response
@@ -90,42 +93,10 @@ def do_something(incoming_msg):
 # put it inside of the "content" below, otherwise Webex won't understand
 # what you send it.
 def show_card(incoming_msg):
-    attachment = """
-    {
-        "contentType": "application/vnd.microsoft.card.adaptive",
-        "content": {
-            "type": "AdaptiveCard",
-            "body": [{
-                "type": "Container",
-                "items": [{
-                    "type": "TextBlock",
-                    "text": "This is a sample of the adaptive card system."
-                }]
-            }],
-            "actions": [{
-                    "type": "Action.Submit",
-                    "title": "Create",
-                    "data": "add",
-                    "style": "positive",
-                    "id": "button1"
-                },
-                {
-                    "type": "Action.Submit",
-                    "title": "Delete",
-                    "data": "remove",
-                    "style": "destructive",
-                    "id": "button2"
-                }
-            ],
-            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-            "version": "1.0"
-        }
-    }
-    """
-    backupmessage = "This is an example using Adaptive Cards."
+    response_message = "Check Status Form"
 
     c = create_message_with_attachment(
-        incoming_msg.roomId, msgtxt=backupmessage, attachment=json.loads(attachment)
+        incoming_msg.roomId, msgtxt=response_message, attachment=INPUT_CARD
     )
     print(c)
     return ""
@@ -140,8 +111,8 @@ def handle_cards(api, incoming_msg):
     :return: A text or markdown based reply
     """
     m = get_attachment_actions(incoming_msg["data"]["id"])
-
-    return "card action was - {}".format(m["inputs"])
+    recipient_email = m["inputs"]["trackEmail"]
+    return "The status of the following user will be notified - {}".format(recipient_email)
 
 
 # Temporary function to send a message with a card attachment (not yet
@@ -167,8 +138,9 @@ def get_attachment_actions(attachmentid):
         "authorization": "Bearer " + teams_token,
     }
 
-    url = "https://api.ciscospark.com/v1/attachment/actions/" + attachmentid
-    response = requests.get(url, headers=headers)
+    attachment_url = "https://api.ciscospark.com/v1/attachment/actions/" + attachmentid
+    response = requests.get(attachment_url, headers=headers)
+
     return response.json()
 
 
