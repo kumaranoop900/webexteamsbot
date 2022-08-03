@@ -71,8 +71,11 @@ with open("./webexteamsbot/StatusInputCard.json", "r") as card:
 with open("./webexteamsbot/ReminderInputCard.json", "r") as reminder_card:
     REMINDER_INPUT_CARD = json.load(reminder_card)
 
-MESSAGE_ID_FOR_FORM = ""
+with open("./webexteamsbot/MessageBox.json", "r") as message:
+    MESSAGE_CARD = json.load(message)
 
+MESSAGE_ID_FOR_FORM = ""
+MESSAGE_TEXT_FOR_FORM = ""
 
 # Create a custom bot greeting function returned when no command is given.
 # The default behavior of the bot is to return the '/help' command response
@@ -105,7 +108,6 @@ def show_status_card(incoming_msg):
     )
     MESSAGE_ID_FOR_FORM = c["id"]
     MESSAGE_TEXT_FOR_FORM = c["text"]
-    print(c)
     return ""
 
 def show_reminder_card(incoming_msg):
@@ -120,7 +122,6 @@ def show_reminder_card(incoming_msg):
     )
     MESSAGE_ID_FOR_FORM = c["id"]
     MESSAGE_TEXT_FOR_FORM = c["text"]
-    print(c)
     return ""
 
 # An example of how to process card actions
@@ -142,6 +143,9 @@ def handle_cards(api, incoming_msg):
 
     elif(MESSAGE_TEXT_FOR_FORM == "status") :
         recipient_email = m["inputs"]["trackEmail"]
+    elif(MESSAGE_TEXT_FOR_FORM == "message") :
+        print("reached message text")
+        return ""
     return "The status of the following user will be notified - {}".format(recipient_email)
 
 
@@ -152,25 +156,31 @@ def processNotify(recipient_email, reminders, message):
     :return: A text or markdown based reply
     """
 
+    text_format = "Hello!! You have received a reminder. {} wants to talk to you about - {}".format(SENDER_EMAIL, message)
+    MESSAGE_CARD["content"]["body"][0]["columns"][0]["items"][1]["text"] = text_format
 
-    text_format = "{} wants to talk to you about - {}".format(SENDER_EMAIL, message)
-    headers = {
-        "content-type": "application/json; charset=utf-8",
-        "authorization": "Bearer " + teams_token,
-    }
-    post_body = {
-        "toPersonEmail": recipient_email,
-        "text": text_format
-    }
     schedule.every(20).seconds.until(timedelta(hours=1)).do(are_participants_available, sender_email_id=SENDER_EMAIL, receiver_email_id=recipient_email)
     while True:
         schedule.run_pending()
         if not schedule.jobs:
             break
         time.sleep(1)
-    requests.post(message_url, json=post_body, headers=headers)
+    send_message_card_to_recipient(recipient_email,MESSAGE_CARD)
     return "Pinged {} about - {}".format(recipient_email, message)
 
+def send_message_card_to_recipient(recipient_email,MESSAGE_CARD):
+    global MESSAGE_TEXT_FOR_FORM
+    headers = {
+           "content-type": "application/json; charset=utf-8",
+           "authorization": "Bearer " + teams_token,
+    }
+    url = "https://api.ciscospark.com/v1/messages"
+    data = {"toPersonEmail": recipient_email, "attachments": [MESSAGE_CARD], "markdown": "message"}
+    response = requests.post(url, json=data, headers=headers)
+    c = response.json()
+    MESSAGE_ID_FOR_FORM = c["id"]
+    MESSAGE_TEXT_FOR_FORM = c["text"]
+    return ""
 
 def are_participants_available(sender_email_id, receiver_email_id):
     if get_user_current_status(receiver_email_id) == 'active' and get_user_current_status(sender_email_id) == 'active':
@@ -300,4 +310,4 @@ bot.remove_command("/echo")
 
 if __name__ == "__main__":
     # Run Bot
-    bot.run(host="0.0.0.0", port=6000)
+    bot.run(host="0.0.0.0", port=7070)
