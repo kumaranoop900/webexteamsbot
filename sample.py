@@ -167,7 +167,7 @@ def handle_cards(api, incoming_msg):
         reminders = m["inputs"]["reminder"]
         message = m["inputs"]["messageContext"]
         processNotify(recipient_email, reminders, message)
-        return "{} was successfully notified".format(recipient_email)
+        return
 
     elif MESSAGE_TEXT_FOR_FORM == "status":
         recipient_email = m["inputs"]["trackEmail"]
@@ -262,6 +262,8 @@ def processNotify(recipient_email, reminders, message):
     send_message_card_to_recipient(recipient_email, MESSAGE_CARD)
     reminder_flag = False
 
+    send_default_message("{} was successfully notified".format(recipient_email))
+
     processReminder(recipient_email,reminders,SENDER_EMAIL)
 
     return "Pinged {} about - {}".format(recipient_email, message)
@@ -290,8 +292,8 @@ def send_reminder_message(recipient_email_id, sender_email_id):
             "authorization": "Bearer " + teams_token,
     }
     post_body = {
-        "toPersonEmail": email_id,
-        "text": "gentle reminder #"+REMINDER_COUNT+" from "+sender_email_id
+        "toPersonEmail": recipient_email_id,
+        "text": "Gentle reminder from "+sender_email_id
     }
     requests.post(message_url, json=post_body, headers=headers)
     REMINDER_COUNT = REMINDER_COUNT - 1
