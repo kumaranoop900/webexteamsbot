@@ -183,7 +183,6 @@ def handle_cards(api, incoming_msg):
             return text_success_format
 
     elif MESSAGE_TEXT_FOR_FORM == "message":
-        print("reached message text")
         REMINDER_COUNT = 0
         return ""
 
@@ -263,22 +262,22 @@ def processNotify(recipient_email, reminders, message):
     send_message_card_to_recipient(recipient_email, MESSAGE_CARD)
     reminder_flag = False
 
-    processReminder(recipient_email,reminders)
+    processReminder(recipient_email,reminders,SENDER_EMAIL)
 
     return "Pinged {} about - {}".format(recipient_email, message)
 
-def processReminder(recipient_email,reminders):
+def processReminder(recipient_email,reminders,sender_email):
     global REMINDER_COUNT
 
     REMINDER_COUNT = int(reminders)
-    schedule.every(10).seconds.until(timedelta(hours=1)).do(send_reminder_message, email_id=recipient_email)
+    schedule.every(10).seconds.until(timedelta(hours=1)).do(send_reminder_message, recipient_email_id=recipient_email, sender_email_id=sender_email)
     while True:
         schedule.run_pending()
         if not schedule.jobs:
             break
         time.sleep(1)
 
-def send_reminder_message(email_id):
+def send_reminder_message(recipient_email_id, sender_email_id):
     global REMINDER_COUNT
 
     if(REMINDER_COUNT == 0):
@@ -289,7 +288,7 @@ def send_reminder_message(email_id):
     }
     post_body = {
         "toPersonEmail": email_id,
-        "text": "gentle reminder"
+        "text": "gentle reminder #"+REMINDER_COUNT+" from "+sender_email_id
     }
     requests.post(message_url, json=post_body, headers=headers)
     REMINDER_COUNT = REMINDER_COUNT - 1
