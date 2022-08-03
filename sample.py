@@ -33,9 +33,6 @@ global LAST_STATUS_CHECK
 LAST_STATUS_CHECK = datetime.datetime.now()
 message_url = "https://webexapis.com/v1/messages"
 
-global PARTICIPANTS_AVAILABLE
-PARTICIPANTS_AVAILABLE = False
-
 # Example: How to limit the approved Webex Teams accounts for interaction
 #          Also uncomment the parameter in the instantiation of the new bot
 # List of email accounts of approved users to talk with the bot
