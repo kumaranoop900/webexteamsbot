@@ -31,6 +31,10 @@ MESSAGE_ID_FOR_FORM = ""
 
 global LAST_STATUS_CHECK
 LAST_STATUS_CHECK = datetime.datetime.now()
+message_url = "https://webexapis.com/v1/messages"
+
+global PARTICIPANTS_AVAILABLE
+PARTICIPANTS_AVAILABLE = False
 
 # Example: How to limit the approved Webex Teams accounts for interaction
 #          Also uncomment the parameter in the instantiation of the new bot
@@ -77,6 +81,11 @@ with open("./webexteamsbot/StatusInputCard.json", "r") as card:
 with open("./webexteamsbot/ReminderInputCard.json", "r") as reminder_card:
     REMINDER_INPUT_CARD = json.load(reminder_card)
 
+with open("./webexteamsbot/MessageBox.json", "r") as message:
+    MESSAGE_CARD = json.load(message)
+
+MESSAGE_ID_FOR_FORM = ""
+MESSAGE_TEXT_FOR_FORM = ""
 
 # Create a custom bot greeting function returned when no command is given.
 # The default behavior of the bot is to return the '/help' command response
@@ -90,6 +99,18 @@ def greeting(incoming_msg):
     response.markdown += "See what I can do by asking for **/help**."
     return response
 
+
+# Create functions that will be linked to bot commands to add capabilities
+# ------------------------------------------------------------------------
+
+# A simple command that returns a basic string that will be sent as a reply
+def do_something(incoming_msg):
+    """
+    Sample function to do some action.
+    :param incoming_msg: The incoming message object from Teams
+    :return: A text or markdown based reply
+    """
+    return "i did what you said - {}".format(incoming_msg.text)
 
 
 # This function generates a basic adaptive card and sends it to the user
@@ -111,7 +132,6 @@ def show_status_card(incoming_msg):
     )
     MESSAGE_ID_FOR_FORM = c["id"]
     MESSAGE_TEXT_FOR_FORM = c["text"]
-    print(c)
     return ""
 
 def show_reminder_card(incoming_msg):
@@ -126,7 +146,6 @@ def show_reminder_card(incoming_msg):
     )
     MESSAGE_ID_FOR_FORM = c["id"]
     MESSAGE_TEXT_FOR_FORM = c["text"]
-    print(c)
     return ""
 
 # An example of how to process card actions
@@ -158,6 +177,10 @@ def handle_cards(api, incoming_msg):
             return text_failure_format
         else:
             return text_success_format
+
+    elif (MESSAGE_TEXT_FOR_FORM == "message"):
+        print("reached message text")
+        return ""
 
 def processNotify(recipient_email, reminders, message):
     """
@@ -237,6 +260,52 @@ def send_default_message(message):
     }
 
     requests.post(message_url, json=post_body, headers=headers)
+
+
+def processNotify(recipient_email, reminders, message):
+    """
+    Sample function to do some action.
+    :param incoming_msg: The incoming message object from Teams
+    :return: A text or markdown based reply
+    """
+
+    text_format = "Hello!! You have received a reminder. {} wants to talk to you about - {}".format(SENDER_EMAIL, message)
+    MESSAGE_CARD["content"]["body"][0]["columns"][0]["items"][1]["text"] = text_format
+
+    schedule.every(20).seconds.until(timedelta(hours=1)).do(are_participants_available, sender_email_id=SENDER_EMAIL, receiver_email_id=recipient_email)
+    while True:
+        schedule.run_pending()
+        if not schedule.jobs:
+            break
+        time.sleep(1)
+    send_message_card_to_recipient(recipient_email,MESSAGE_CARD)
+    return "Pinged {} about - {}".format(recipient_email, message)
+
+def send_message_card_to_recipient(recipient_email,MESSAGE_CARD):
+    global MESSAGE_TEXT_FOR_FORM
+    headers = {
+           "content-type": "application/json; charset=utf-8",
+           "authorization": "Bearer " + teams_token,
+    }
+    url = "https://api.ciscospark.com/v1/messages"
+    data = {"toPersonEmail": recipient_email, "attachments": [MESSAGE_CARD], "markdown": "message"}
+    response = requests.post(url, json=data, headers=headers)
+    c = response.json()
+    MESSAGE_ID_FOR_FORM = c["id"]
+    MESSAGE_TEXT_FOR_FORM = c["text"]
+    return ""
+
+def are_participants_available(sender_email_id, receiver_email_id):
+    if get_user_current_status(receiver_email_id) == 'active' and get_user_current_status(sender_email_id) == 'active':
+        return schedule.CancelJob
+
+def get_user_current_status(email_id):
+    get_people_api_string = "https://webexapis.com/v1/people?email=" + email_id
+    response = requests.get(get_people_api_string, headers={'Authorization': 'Bearer {}'.format(teams_token)})
+    response_json = response.json()
+    status = response_json['items'][0]['status']
+    print("****The current status of " + email_id + "is :" + status)
+    return status
 
 
 # Temporary function to send a message with a card attachment (not yet

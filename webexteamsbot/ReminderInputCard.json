@@ -1,0 +1,99 @@
+{
+  "contentType": "application/vnd.microsoft.card.adaptive",
+  "content": {
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.2",
+    "body": [
+      {
+        "type": "ColumnSet",
+        "columns": [
+          {
+            "type": "Column",
+            "width": 2,
+            "items": [
+              {
+                "type": "TextBlock",
+                "weight": "Bolder",
+                "size": "Medium",
+                "text": "Notify User"
+              },
+              {
+                "type": "TextBlock",
+                "isSubtle": true,
+                "wrap": true,
+                "text": "Notify user about an upcoming conversation"
+              },
+              {
+                "type": "TextBlock",
+                "text": "Recipient's email",
+                "wrap": true
+              },
+              {
+                "type": "Input.Text",
+                "id": "notifyEmail",
+                "placeholder": "johndoe@example.com",
+                "style": "Email"
+              },
+              {
+                "type": "TextBlock",
+                "text": "Message",
+                "wrap": true
+              },
+              {
+                "type": "Input.Text",
+                "id": "messageContext",
+                "placeholder": "Message"
+              },
+              {
+                "type": "TextBlock",
+                "isSubtle": true,
+                "wrap": true,
+                "text": "Reminders will be sent at 10 min intervals."
+              },
+              {
+                "type": "TextBlock",
+                "text": "Reminders"
+              },
+              {
+                "type": "Input.ChoiceSet",
+                "id": "reminder",
+                "value": "1",
+                "choices": [
+                  {
+                    "title": "1",
+                    "value": "1"
+                  },
+                  {
+                    "title": "2",
+                    "value": "2"
+                  },
+                  {
+                    "title": "3",
+                    "value": "3"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "Column",
+            "width": 1,
+            "items": [
+              {
+                "type": "Image",
+                "url": "https://i.postimg.cc/wMJvqNR6/sign-up.jpg"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "type": "Action.Submit",
+        "title": "Submit"
+      }
+    ]
+  }
+}
