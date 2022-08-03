@@ -29,6 +29,9 @@ PARTICIPANTS_AVAILABLE = False
 global REMINDER_COUNT
 REMINDER_COUNT = 0
 
+global REMINDER_FLAG
+REMINDER_FLAG = True
+
 global MESSAGE_ID_FOR_FORM
 MESSAGE_ID_FOR_FORM = ""
 
@@ -154,6 +157,7 @@ def show_reminder_card(incoming_msg):
 # An example of how to process card actions
 def handle_cards(api, incoming_msg):
     global REMINDER_COUNT
+    global REMINDER_FLAG
     """
     Sample function to handle card actions.
     :param api: webexteamssdk object
@@ -184,6 +188,7 @@ def handle_cards(api, incoming_msg):
 
     elif MESSAGE_TEXT_FOR_FORM == "message":
         REMINDER_COUNT = 0
+        REMINDER_FLAG = False
         return ""
 
 
@@ -260,7 +265,6 @@ def processNotify(recipient_email, reminders, message):
             break
         time.sleep(1)
     send_message_card_to_recipient(recipient_email, MESSAGE_CARD)
-    reminder_flag = False
 
     send_default_message("{} was successfully notified".format(recipient_email))
 
@@ -270,6 +274,7 @@ def processNotify(recipient_email, reminders, message):
 
 def processReminder(recipient_email,reminders,sender_email):
     global REMINDER_COUNT
+    global REMINDER_FLAG
 
     REMINDER_COUNT = int(reminders)
     schedule.every(10).seconds.until(timedelta(hours=1)).do(send_reminder_message, recipient_email_id=recipient_email, sender_email_id=sender_email)
@@ -278,7 +283,7 @@ def processReminder(recipient_email,reminders,sender_email):
         if not schedule.jobs:
             break
         time.sleep(1)
-    if(REMINDER_COUNT == 0):
+    if(REMINDER_COUNT == 0 and REMINDER_FLAG):
         send_default_message("Reminder to {} Timed out".format(recipient_email))
 
 
