@@ -276,6 +276,9 @@ def processReminder(recipient_email,reminders,sender_email):
         if not schedule.jobs:
             break
         time.sleep(1)
+    if(REMINDER_COUNT == 0):
+        send_default_message("Reminder to {} Timed out".format(recipient_email))
+
 
 def send_reminder_message(recipient_email_id, sender_email_id):
     global REMINDER_COUNT
