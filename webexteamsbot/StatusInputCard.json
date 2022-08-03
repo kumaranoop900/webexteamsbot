@@ -33,16 +33,6 @@
               },
               {
                 "type": "TextBlock",
-                "text": "Your name",
-                "wrap": true
-              },
-              {
-                "type": "Input.Text",
-                "id": "myName",
-                "placeholder": "First and last name"
-              },
-              {
-                "type": "TextBlock",
                 "text": "Recipeint's email",
                 "wrap": true
               },
