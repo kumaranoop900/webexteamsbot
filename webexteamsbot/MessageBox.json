@@ -16,23 +16,13 @@
                 "type": "TextBlock",
                 "weight": "Bolder",
                 "size": "Medium",
-                "text": "Message Card"
+                "text": "Notification"
               },
               {
                 "type": "TextBlock",
                 "isSubtle": true,
                 "wrap": true,
                 "text": ""
-              }
-            ]
-          },
-          {
-            "type": "Column",
-            "width": 1,
-            "items": [
-              {
-                "type": "Image",
-                "url": "https://i.postimg.cc/wMJvqNR6/sign-up.jpg"
               }
             ]
           }
@@ -42,7 +32,7 @@
     "actions": [
       {
         "type": "Action.Submit",
-        "title": "Acknowledge"
+        "title": "OK"
       }
     ]
   }

@@ -22,7 +22,7 @@
                 "type": "TextBlock",
                 "isSubtle": true,
                 "wrap": true,
-                "text": "Please enter the details to know when the recipient will be available"
+                "text": "Please enter the email address of the user to check their status"
               },
               {
                 "type": "TextBlock",
@@ -33,7 +33,7 @@
               },
               {
                 "type": "TextBlock",
-                "text": "Recipeint's email",
+                "text": "Email",
                 "wrap": true
               },
               {

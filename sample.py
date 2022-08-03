@@ -26,6 +26,9 @@ message_url = "https://webexapis.com/v1/messages"
 global PARTICIPANTS_AVAILABLE
 PARTICIPANTS_AVAILABLE = False
 
+global REMINDER_COUNT
+REMINDER_COUNT = 0
+
 global MESSAGE_ID_FOR_FORM
 MESSAGE_ID_FOR_FORM = ""
 
@@ -150,6 +153,7 @@ def show_reminder_card(incoming_msg):
 
 # An example of how to process card actions
 def handle_cards(api, incoming_msg):
+    global REMINDER_COUNT
     """
     Sample function to handle card actions.
     :param api: webexteamssdk object
@@ -167,10 +171,10 @@ def handle_cards(api, incoming_msg):
 
     elif MESSAGE_TEXT_FOR_FORM == "status":
         recipient_email = m["inputs"]["trackEmail"]
-        default_message = "The following user's status will be notified. {}".format(recipient_email)
+        default_message = "The status of {} will be notified.".format(recipient_email)
         send_default_message(default_message)
-        text_success_format = "{} is active on webex".format(recipient_email)
-        text_failure_format = "{} is unavailable for a long time".format(recipient_email)
+        text_success_format = "{} is active now".format(recipient_email)
+        text_failure_format = "{} is unavailable for the past 30 min. Please try again later.".format(recipient_email)
         flag = processStatus(recipient_email)
 
         if flag is True:
@@ -180,6 +184,7 @@ def handle_cards(api, incoming_msg):
 
     elif MESSAGE_TEXT_FOR_FORM == "message":
         print("reached message text")
+        REMINDER_COUNT = 0
         return ""
 
 
@@ -211,12 +216,12 @@ def processStatus(recipient_email):
     start_time = datetime.datetime.now()
     print(start_time)
 
-    schedule.every(20).seconds.until(timedelta(hours=2)).do(is_user_active, email_id=recipient_email)
+    schedule.every(10).seconds.until(timedelta(hours=1)).do(is_user_active, email_id=recipient_email)
     while True:
         schedule.run_pending()
         if not schedule.jobs:
             break
-        if datetime.datetime.now() - start_time > timedelta(hours=1):
+        if datetime.datetime.now() - start_time > timedelta(minutes=30):
             flag = True
             schedule.clear()
             break
@@ -234,22 +239,21 @@ def send_default_message(message):
         "toPersonEmail": SENDER_EMAIL,
         "text": message
     }
-
     requests.post(message_url, json=post_body, headers=headers)
 
 
 def processNotify(recipient_email, reminders, message):
+    global REMINDER_COUNT
     """
     Sample function to do some action.
     :param incoming_msg: The incoming message object from Teams
     :return: A text or markdown based reply
     """
 
-    text_format = "Hello!! You have received a reminder. {} wants to talk to you about - {}".format(SENDER_EMAIL,
-                                                                                                    message)
+    text_format = "{} wants to talk to you \n RE: {}".format(SENDER_EMAIL, message)
     MESSAGE_CARD["content"]["body"][0]["columns"][0]["items"][1]["text"] = text_format
 
-    schedule.every(20).seconds.until(timedelta(hours=1)).do(are_participants_available, sender_email_id=SENDER_EMAIL,
+    schedule.every(10).seconds.until(timedelta(hours=1)).do(are_participants_available, sender_email_id=SENDER_EMAIL,
                                                             receiver_email_id=recipient_email)
     while True:
         schedule.run_pending()
@@ -257,8 +261,38 @@ def processNotify(recipient_email, reminders, message):
             break
         time.sleep(1)
     send_message_card_to_recipient(recipient_email, MESSAGE_CARD)
+    reminder_flag = False
+
+    processReminder(recipient_email,reminders)
+
     return "Pinged {} about - {}".format(recipient_email, message)
 
+def processReminder(recipient_email,reminders):
+    global REMINDER_COUNT
+
+    REMINDER_COUNT = int(reminders)
+    schedule.every(10).seconds.until(timedelta(hours=1)).do(send_reminder_message, email_id=recipient_email)
+    while True:
+        schedule.run_pending()
+        if not schedule.jobs:
+            break
+        time.sleep(1)
+
+def send_reminder_message(email_id):
+    global REMINDER_COUNT
+
+    if(REMINDER_COUNT == 0):
+        return schedule.CancelJob
+    headers = {
+            "content-type": "application/json; charset=utf-8",
+            "authorization": "Bearer " + teams_token,
+    }
+    post_body = {
+        "toPersonEmail": email_id,
+        "text": "gentle reminder"
+    }
+    requests.post(message_url, json=post_body, headers=headers)
+    REMINDER_COUNT = REMINDER_COUNT - 1
 
 def send_message_card_to_recipient(recipient_email, MESSAGE_CARD):
     global MESSAGE_TEXT_FOR_FORM
@@ -396,4 +430,4 @@ bot.remove_command("/echo")
 
 if __name__ == "__main__":
     # Run Bot
-    bot.run(host="0.0.0.0", port=6000)
+    bot.run(host="0.0.0.0", port=7070)
